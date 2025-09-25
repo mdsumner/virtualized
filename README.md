@@ -48,6 +48,20 @@ There is no guarantee an of this will continue to work, if we commit to
 longer term support it will be on object storage hosting the indexes
 (parquet or icechunk or materialized, or other).
 
+The script to do the raw processing in-situ is in py/ here. For some
+reason I am not seeing any benefit from parallelizing with
+concurrent.futures or with dask, it actually slows it down.
+
+Running on one cpu for one variable looks like this:
+
+       Exit Status:        0
+       Service Units:      13.70
+       NCPUs Requested:    1                      NCPUs Used: 1
+                                               CPU Time Used: 00:47:48
+       Memory Requested:   16.0GB                Memory Used: 16.0GB
+       Walltime requested: 02:35:00            Walltime Used: 01:42:45
+       JobFS requested:    100.0MB                JobFS used: 0B
+
 ## Example
 
 Here we connect to the virtual Zarr store, this represents a very huge
@@ -180,3 +194,24 @@ values are valid, and mapped correctly).
 
 We can leverage the GDAL api to cast these slices to classic raster
 mode, and many other options.
+
+Let’s try another variable (this won’t go on, I won’t host them all here
+this is just a test).
+
+``` r
+library(terra)
+dsn <- "ZARR:\"/vsicurl/https://raw.githubusercontent.com/mdsumner/virtualized/refs/heads/main/remote/ocean_salt_2023.parq\":/salt:{10}:{0}"
+
+(r <- rast(dsn))
+#> class       : SpatRaster 
+#> size        : 1500, 3600, 1  (nrow, ncol, nlyr)
+#> resolution  : 0.1, 0.1  (x, y)
+#> extent      : -9.507305e-10, 360, -75, 75  (xmin, xmax, ymin, ymax)
+#> coord. ref. :  
+#> source      : salt:{10}:{0} 
+#> name        : salt:{10}:{0}
+
+plot(r)
+```
+
+![](README_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->
