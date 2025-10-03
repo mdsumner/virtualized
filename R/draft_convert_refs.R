@@ -1,5 +1,5 @@
-fs::dir_copy("ocean_temp_2023.parq", "remote/ocean_temp_2023.parq")
-f <- fs::dir_ls("remote/ocean_temp_2023.parq", regexp = ".*parq$", type = "f", recurse = T)
+#fs::dir_copy("ocean_temp_2023.parq", "remote/ocean_temp_2023.parq")
+f <- fs::dir_ls("remote/ocean_salt_2023.parq", regexp = ".*parq$", type = "f", recurse = T)
 
 library(arrow)
 
