@@ -1,0 +1,12 @@
+inline_chunk_threshold_bytes: null
+get_partial_values_concurrency: null
+compression: null
+max_concurrent_requests: null
+caching: null
+storage: null
+virtual_chunk_containers:
+  https://thredds.nci.org.au/:
+    name: null
+    url_prefix: https://thredds.nci.org.au/
+    store: !http {}
+manifest: null
