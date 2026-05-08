@@ -19,7 +19,7 @@ ff = [f"file://{f}" for f in glob.glob(f'{store_path}/*{varlabel}*.nc')]
 if len(ff) < 1:
    sys.exit("no files found")
 
-outfile = f"virtualized/{varlabel}_2023.parq"
+outfile = f"remote/{varlabel}_2023.parq"
 
 if  os.path.exists(outfile):
   sys.exit(f"outfile {outfile} already exists")
