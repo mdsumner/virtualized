@@ -28,13 +28,68 @@ The array `ocean_temp` has dimensions `Time,st_ocean,yt_ocean,xt_ocean` of shape
 
 The store was built by using [VirtualiZarr](https://virtualizarr.readthedocs.io/en/latest/index.html) in-situ on NCI, then pushing up the resulting [Parquet kerchunk](https://fsspec.github.io/kerchunk/spec.html#parquet-references) store to here on Github, and then re-naming the path references from those in-situ on NCI, to publically available ones that are available via the [NCI Thredds server](https://thredds.nci.org.au/thredds/catalog/gb6/BRAN/BRAN2023/catalog.html). 
 
+## An eReefs / GBR4 example
+
+There is now a matching eReefs example in [remote/gbr4_temp_2024-01-16_2024-01-17.parq](https://github.com/mdsumner/virtualized/tree/main/remote/gbr4_temp_2024-01-16_2024-01-17.parq). This one virtualizes the `temp` variable from two public GBR4 hydrodynamic files on the [NCI THREDDS catalogue](https://thredds.nci.org.au/thredds/catalog/fx3/gbr4_v2/catalog.html):
+
+- `gbr4_simple_2024-01-16.nc`
+- `gbr4_simple_2024-01-17.nc`
+
+The resulting logical array has dimensions `time,k,j,i` with shape `(48, 47, 180, 600)`.
+
+The store can be rebuilt directly from the public THREDDS HTTPServer URLs with:
+
+```python
+python py/ereefs_var.py temp remote/gbr4_temp_2024-01-16_2024-01-17.parq \
+  https://thredds.nci.org.au/thredds/fileServer/fx3/gbr4_v2/gbr4_simple_2024-01-16.nc \
+  https://thredds.nci.org.au/thredds/fileServer/fx3/gbr4_v2/gbr4_simple_2024-01-17.nc
+```
+
+and opened with xarray in the same way as the BRAN example:
+
+```python
+import xarray
+
+ds = xarray.open_dataset(
+    "https://raw.githubusercontent.com/mdsumner/virtualized/refs/heads/main/remote/gbr4_temp_2024-01-16_2024-01-17.parq",
+    engine="kerchunk",
+    chunks={},
+)
+ds
+```
+
+```
+<xarray.Dataset> Size: 976MB
+Dimensions:    (time: 48, k: 47, j: 180, i: 600)
+Coordinates:
+  * time       (time) datetime64[ns] 384B 2024-01-15T14:00:00 ... 2024-01-17T...
+    latitude   (j, i) float64 864kB dask.array<chunksize=(180, 600), meta=np.ndarray>
+    longitude  (j, i) float64 864kB dask.array<chunksize=(180, 600), meta=np.ndarray>
+    zc         (k) float64 376B dask.array<chunksize=(47,), meta=np.ndarray>
+Dimensions without coordinates: k, j, i
+Data variables:
+    temp       (time, k, j, i) float32 975MB dask.array<chunksize=(1, 24, 90, 300), meta=np.ndarray>
+Attributes:
+    title:                    GBR4 Hydro
+    description:              New eReefs GBR 4k grid with rivers. Uses JCU ba...
+    ems_version:              v1.4.0 rev(7358)
+    Run_ID:                   2.1
+```
+
+A quick scalar read from a wet cell looks like this:
+
+```python
+float(ds.temp.isel(time=0, k=0, j=89, i=156).values)
+# 1.6766995
+```
+
 ## Limitations
 
 We are using kerchunk Parquet, we are supposed to use Icechunk but that won't work in GDAL yet, and the tooling is more challenging in the environments we currently need to use. 
 
 There is no guarantee an of this will continue to work, if we commit to longer term support it will be on object storage hosting the indexes (parquet or icechunk or materialized, or other). 
 
-The script to do the raw processing in-situ is in py/ here. For some reason I am not seeing any benefit from parallelizing with concurrent.futures or with dask, it actually slows it down. 
+The scripts to do the raw processing are in [py/](py/). For some reason I am not seeing any benefit from parallelizing with concurrent.futures or with dask, it actually slows it down. 
 
 Running on one cpu for one variable looks like this:
 
