@@ -4,21 +4,26 @@
 # virtualized
 
 An ongoing experiment to compare array virtualization in GDAL and in
-xarray/VirtualiZarr. This repo exists purely to describe two ways of
-connecting to a virtualized-netcdf store, with various software tools.
+xarray/VirtualiZarr. This repo exists for different ways of connecting
+to a virtualized-netcdf store, with various software tools.
 
 ## A virtualized store
 
 In directory
+[zarr/](https://github.com/mdsumner/virtualized/tree/main/zarr/ocean_temp_2023.zarr)
+there is a nested Parquet representation of a modelled ocean variable
+`ocean_temp`, this created by R and rhdf5 and GDAL multidim.
+
+In directory
 [remote/](https://github.com/mdsumner/virtualized/tree/main/remote/ocean_temp_2023.parq)
 there is a nested Parquet representation of a modelled ocean variable
-`ocean_temp`.
+`ocean_temp`, this created by Python with VirtualiZarr.
 
 Note that for actually connecting to this we need the github raw link,
 which isn’t a valid link in a browser but works for connection, that
 looks like this:
 
-    https://raw.githubusercontent.com/mdsumner/virtualized/refs/heads/main/remote/ocean_temp_2023.parq
+    https://raw.githubusercontent.com/mdsumner/virtualized/refs/heads/main/zarr/ocean_temp_2023.zarr
 
 The array `ocean_temp` has dimensions `Time,st_ocean,yt_ocean,xt_ocean`
 of shape `(5599, 51, 1500, 3600)`. This consists of 180 *monthly, with
@@ -26,10 +31,9 @@ daily time step* NetCDF files that exist on the
 [NCI](https://nci.org.au/) high performance computing system. The model
 data is a product of the [Bluelink
 Reanalysis](https://research.csiro.au/bluelink/global/reanalysis/) by
-CSIRO. (We are using BRAN2023, but please note this is purely an
-infrastructure exercise for now, a way to prototype future workflows).
+CSIRO. We are using BRAN2023.
 
-The store was built by using
+The store in remote/ was built by using
 [VirtualiZarr](https://virtualizarr.readthedocs.io/en/latest/index.html)
 in-situ on NCI, then pushing up the resulting [Parquet
 kerchunk](https://fsspec.github.io/kerchunk/spec.html#parquet-references)
@@ -40,19 +44,22 @@ server](https://thredds.nci.org.au/thredds/catalog/gb6/BRAN/BRAN2023/catalog.htm
 
 ## Limitations
 
-We are using kerchunk Parquet, we are supposed to use Icechunk but that
-won’t work in GDAL yet, and the tooling is more challenging in the
-environments we currently need to use.
+We are using kerchunk Parquet, with intention to also use Icechunk
+natively and [from GDAL](https://github.com/OSGeo/gdal/pull/14755).
 
 There is no guarantee an of this will continue to work, if we commit to
 longer term support it will be on object storage hosting the indexes
 (parquet or icechunk or materialized, or other).
 
-The script to do the raw processing in-situ is in py/ here. For some
-reason I am not seeing any benefit from parallelizing with
+The script to do the raw processing in-situ for zarr/ is in R/nci. This
+relies on a custom build of rhdf5 (submitted as a PR to a future
+version)
+
+The script to do the raw processing in-situ for remote/ is in py/ here.
+For some reason I am not seeing any benefit from parallelizing with
 concurrent.futures or with dask, it actually slows it down.
 
-Running on one cpu for one variable looks like this:
+Running on one cpu for one variable looks like this for python:
 
        Exit Status:        0
        Service Units:      13.70
@@ -76,6 +83,7 @@ First, we read it the *canonical* way with xarray:
 import xarray
 ds = xarray.open_dataset("https://raw.githubusercontent.com/mdsumner/virtualized/refs/heads/main/remote/ocean_temp_2023.parq", engine = "kerchunk", chunks = {})
 ds
+
 ```
 
     <xarray.Dataset> Size: 12TB
@@ -97,7 +105,7 @@ ds
         catalogue_doi_url:  https://dx.doi.org/10.25914/2wxj-vt48
         acknowledgement:    BRAN output is made freely available by CSIRO Bluelin...
 
-run a lazy subset select and pull the values
+run a lazy subset select
 
 ``` python
 ds.temp.isel(Time = 0, st_ocean = 10, yt_ocean = 100)
@@ -118,6 +126,19 @@ ds.temp.isel(Time = 0, st_ocean = 10, yt_ocean = 100)
         cell_methods:   time: mean Time: mean
         time_avg_info:  average_T1,average_T2,average_DT
         standard_name:  sea_water_potential_temperature
+
+Be sure to tone down concurrency before reading actual data (8 seems
+safe for thredds), not sure if zarr or dask is the best place
+
+``` python
+import zarr
+zarr.config.set({"async.concurrency": 8})
+
+#import dask
+#dask.config.set(num_workers = 8)
+```
+
+and read actual values.
 
 ``` python
 v = ds.temp.isel(Time = 0, st_ocean = 10, yt_ocean = 100).values
@@ -161,24 +182,10 @@ argument’s sake.
 
 ``` r
 library(terra)
-#> terra 1.8.64
 dsn <- "ZARR:\"/vsicurl/https://raw.githubusercontent.com/mdsumner/virtualized/refs/heads/main/remote/ocean_temp_2023.parq\":/temp:{10}:{0}"
 
 (r <- rast(dsn))
-#> class       : SpatRaster 
-#> size        : 1500, 3600, 1  (nrow, ncol, nlyr)
-#> resolution  : 0.1, 0.1  (x, y)
-#> extent      : -9.507305e-10, 360, -75, 75  (xmin, xmax, ymin, ymax)
-#> coord. ref. :  
-#> source      : temp:{10}:{0} 
-#> name        : temp:{10}:{0}
 
-plot(r)
-```
-
-![](README_files/figure-gfm/unnamed-chunk-2-1.png)<!-- -->
-
-``` r
 #terra 1.8.64
 #class       : SpatRaster
 #size        : 1500, 3600, 1  (nrow, ncol, nlyr)
@@ -194,24 +201,3 @@ values are valid, and mapped correctly).
 
 We can leverage the GDAL api to cast these slices to classic raster
 mode, and many other options.
-
-Let’s try another variable (this won’t go on, I won’t host them all here
-this is just a test).
-
-``` r
-library(terra)
-dsn <- "ZARR:\"/vsicurl/https://raw.githubusercontent.com/mdsumner/virtualized/refs/heads/main/remote/ocean_salt_2023.parq\":/salt:{10}:{0}"
-
-(r <- rast(dsn))
-#> class       : SpatRaster 
-#> size        : 1500, 3600, 1  (nrow, ncol, nlyr)
-#> resolution  : 0.1, 0.1  (x, y)
-#> extent      : -9.507305e-10, 360, -75, 75  (xmin, xmax, ymin, ymax)
-#> coord. ref. :  
-#> source      : salt:{10}:{0} 
-#> name        : salt:{10}:{0}
-
-plot(r)
-```
-
-![](README_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->
