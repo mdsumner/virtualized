@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>virtualized</title>
+<style>
+  body { margin: 0; background: #0f1418; color: #e3e9ee; font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 720px; margin: 0 auto; padding: 32px 20px 60px; }
+  h1 { font-size: 26px; margin: 0 0 4px; }
+  .sub { color: #8fa1ad; margin: 0 0 28px; }
+  a { color: #5ec4b6; }
+  .card { display: block; text-decoration: none; color: inherit; background: #172026; border: 1px solid #2a3640; border-radius: 10px; padding: 18px 20px; margin: 18px 0; }
+  .card:hover { border-color: #5ec4b6; }
+  .card b { color: #5ec4b6; font-size: 18px; }
+  .note { background: #1c2a2e; border-left: 3px solid #e8a65a; padding: 12px 16px; border-radius: 6px; margin: 26px 0; }
+  code { font: 14px ui-monospace, Menlo, monospace; background: #172026; padding: 1px 5px; border-radius: 4px; }
+  ul { padding-left: 20px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>virtualized</h1>
+  <p class="sub">BRAN2023 daily ocean fields, virtualized as kerchunk Parquet reference stores.</p>
+
+  <a class="card" href="https://mdsumner.github.io/virtual-cog-pilot/zarr-explorer/">
+    <b>Zarr explorer &rarr;</b><br>
+    Browse every store in this repository in the browser: the chunk grid coloured by compressed byte size,
+    per-chunk references (URL, offset, length), byte profiles through depth and time, store-to-store
+    metadata comparison, a SQL console over the refs, and decoded values where the data server allows it.
+  </a>
+
+  <p>
+    The stores index 180-192 monthly netCDF files of the CSIRO Bluelink Reanalysis (BRAN2023) served by
+    NCI THREDDS. No data is copied: each Zarr chunk is a row in a <code>refs.N.parq</code> file pointing at a
+    byte range of the original netCDF.
+  </p>
+  <ul>
+    <li><code>remote/*.parq</code>: made with VirtualiZarr (Python) on NCI</li>
+    <li><code>zarr/*.zarr</code>: made with R (rhdf5 and GDAL multidim)</li>
+  </ul>
+
+  <div class="note">
+    <b>Where the references live.</b> The reference stores are currently served from this GitHub repository.
+    Storage will move to <a href="https://source.coop">source.coop</a> or an equivalent open object store.
+    Future moves will be made operational: the explorer, the example code and the links here will be updated
+    to follow the stores, so that the published entry points keep working.
+  </div>
+
+  <p>
+    Source, scripts and access examples (xarray, GDAL, terra):
+    <a href="https://github.com/mdsumner/virtualized">github.com/mdsumner/virtualized</a>
+  </p>
+</main>
+</body>
+</html>

@@ -7,6 +7,15 @@ An ongoing experiment to compare array virtualization in GDAL and in
 xarray/VirtualiZarr. This repo exists for different ways of connecting
 to a virtualized-netcdf store, with various software tools.
 
+**Explore in the browser:** [Zarr
+explorer](https://mdsumner.github.io/virtual-cog-pilot/zarr-explorer/)
+for every store in this repo (landing page:
+<https://mdsumner.github.io/virtualized/>). The reference stores are
+served from this repository for now; storage will move to
+[source.coop](https://source.coop) or an equivalent open object store,
+and future moves will be made operational, with the explorer and links
+here updated to follow.
+
 ## A virtualized store
 
 In directory
